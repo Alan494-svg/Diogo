@@ -3,26 +3,29 @@ const gameArea = document.querySelector(".game-area");
 const mensagem = document.getElementById("mensagem");
 const pontuacao = document.getElementById("pontuacao");
 const btnPular = document.getElementById("btnPular");
+const VELOCIDADE_INICIAL = 10; // aqui você define a nova velocidade
+let velocidadeCacto = VELOCIDADE_INICIAL;
+
 
 let pontos = 0;
-let velocidadeCacto = 4;
 let intervaloCacto = 2000;
-let intervaloPontuacao = 200;
-let intervaloPontuacaoAtual;
 let jogoAtivo = true;
 
 let pulando = false;
 let segurando = false;
 let posY = 0;
 let velocidade = 0;
-let gravidade = 1;
-let impulso = 15;
+let gravidade = 2;
+let impulso = 12;
 
-let timerCacto; // para controlar o setTimeout da criação de cactos
-
+let timerCacto; // para controlar a criação de cactos
 let tempoInicio;
 const tempoMinimo = 200;
 const tempoMaximo = 600;
+
+let cactos = []; // array global de cactos
+
+let ultimoTempoPontuacao = Date.now(); // usado para pontuação baseada no tempo
 
 // --- Controles ---
 document.addEventListener("keydown", e => { if (e.code === "Space") iniciarPulo(); });
@@ -44,10 +47,26 @@ function iniciarPulo() {
 }
 function terminarPulo() { segurando = false; }
 
-// --- Loop do jogo ---
+// --- Loop principal ---
 function atualizar() {
+  const agora = Date.now();
+
+  // --- Atualizar pontuação baseado no tempo ---
+  if (jogoAtivo) {
+    const delta = agora - ultimoTempoPontuacao;
+    if (delta >= 100) { // 1 ponto a cada 100ms
+      pontos += Math.floor(delta / 100);
+      ultimoTempoPontuacao = agora;
+      pontuacao.innerText = `Pontos: ${pontos}`;
+
+      // Aumentar dificuldade a cada 100 pontos
+      if (pontos % 100 === 0) aumentarDificuldade();
+    }
+  }
+
+  // --- Pulo do dino ---
   if (pulando) {
-    const tempoDecorrido = Date.now() - tempoInicio;
+    const tempoDecorrido = agora - tempoInicio;
 
     if (segurando && tempoDecorrido < tempoMaximo) {
       velocidade -= 0.5;
@@ -68,9 +87,33 @@ function atualizar() {
     dino.style.bottom = posY + "px";
   }
 
+  // --- Mover cactos ---
+  for (let i = cactos.length - 1; i >= 0; i--) {
+    const cacto = cactos[i];
+    cacto.x -= velocidadeCacto;
+    cacto.element.style.left = cacto.x + "px";
+
+    const dinoRect = dino.getBoundingClientRect();
+    const cactoRect = cacto.element.getBoundingClientRect();
+
+    // Colisão
+    if (
+      dinoRect.right > cactoRect.left &&
+      dinoRect.left < cactoRect.right &&
+      dinoRect.bottom > cactoRect.top
+    ) {
+      gameOver();
+    }
+
+    // Remover cacto saindo da tela
+    if (cacto.x < -60) {
+      cacto.element.remove();
+      cactos.splice(i, 1);
+    }
+  }
+
   requestAnimationFrame(atualizar);
 }
-requestAnimationFrame(atualizar);
 
 // --- Criar cactos ---
 function criarCacto() {
@@ -86,101 +129,47 @@ function criarCacto() {
     gameArea.appendChild(novoCacto);
 
     let posX = gameWidth + espacamento;
-
-    const mover = setInterval(() => {
-      if (!jogoAtivo) {
-        clearInterval(mover);
-        return;
-      }
-
-      posX -= velocidadeCacto;
-      novoCacto.style.left = posX + "px";
-
-      const dinoRect = dino.getBoundingClientRect();
-      const cactoRect = novoCacto.getBoundingClientRect();
-
-      // Colisão
-      if (
-        dinoRect.right > cactoRect.left &&
-        dinoRect.left < cactoRect.right &&
-        dinoRect.bottom > cactoRect.top
-      ) {
-        gameOver();
-        clearInterval(mover);
-      }
-
-      // Remover cacto quando sair da tela
-      if (posX < -60) {
-        novoCacto.remove();
-        clearInterval(mover);
-      }
-    }, 10);
+    cactos.push({ element: novoCacto, x: posX });
 
     espacamento += novoCacto.offsetWidth + 10;
   }
 
-  // --- Próxima geração ---
   const minIntervalo = 1000;
   let maxIntervalo = pontos > 400 ? 400 : intervaloCacto;
   const proximoCacto = Math.random() * (maxIntervalo - minIntervalo) + minIntervalo;
 
-  // Limpar timer antigo antes de criar novo
   clearTimeout(timerCacto);
   timerCacto = setTimeout(criarCacto, proximoCacto);
 }
 
-
-// --- Pontuação ---
-function iniciarPontuacao() {
-  intervaloPontuacaoAtual = setInterval(() => {
-    if (!jogoAtivo) return;
-
-    pontos++;
-    pontuacao.innerText = `Pontos: ${pontos}`;
-
-    if (pontos % 100 === 0) aumentarDificuldade();
-  }, intervaloPontuacao);
-}
-
-// --- Dificuldade ---
+// --- Aumentar dificuldade ---
 function aumentarDificuldade() {
-  if (pontos <= 400) 
-  velocidadeCacto += 1;
-  intervaloCacto = 2000;
-  intervaloPontuacao = Math.max(50, intervaloPontuacao - 20);
-
-  clearInterval(intervaloPontuacaoAtual);
-  iniciarPontuacao();
+  if (pontos <= 400) velocidadeCacto += 1;
 }
-// --- REINICIAR JOGO ---
+
+// --- Reiniciar jogo ---
 function reiniciarJogo() {
-   clearTimeout(timerCacto); // limpa timer da geração
-  document.querySelectorAll(".cacto").forEach(c => c.remove());
-  
-  // Resetar variáveis
+  clearTimeout(timerCacto);
+  cactos.forEach(c => c.element.remove());
+  cactos = [];
+
   pontos = 0;
-  velocidadeCacto = 4;
+  velocidadeCacto = VELOCIDADE_INICIAL; // usa a velocidade inicial configurada
   intervaloCacto = 2000;
-  intervaloPontuacao = 200;
   posY = 0;
   pulando = false;
   segurando = false;
   velocidade = 0;
   jogoAtivo = true;
 
-  // Resetar pontuação e mensagem
   pontuacao.innerText = `Pontos: 0`;
   mensagem.innerHTML = "";
 
-  // Remover todos os cactos antigos
-  document.querySelectorAll(".cacto").forEach(c => c.remove());
-
-  // Reativar botão
   btnPular.disabled = false;
   btnPular.style.backgroundColor = "transparent";
 
-  // Iniciar loops do jogo
-  iniciarPontuacao();
+  ultimoTempoPontuacao = Date.now();
+
   criarCacto();
 }
 
@@ -191,14 +180,12 @@ function gameOver() {
   mensagem.innerHTML = "💀 Game Over! Clique ou pressione espaço ou o botão para reiniciar.";
   btnPular.disabled = true;
   btnPular.style.backgroundColor = "#555";
-  clearInterval(intervaloPontuacaoAtual);
 
-  // Função que reinicia o jogo
   function ativarReinicio() {
     reiniciarJogo();
   }
 
-  // Listener para tecla espaço
+  // Espaço
   window.addEventListener("keydown", function keyListener(e) {
     if (e.code === "Space") {
       ativarReinicio();
@@ -206,21 +193,17 @@ function gameOver() {
     }
   });
 
-  // Listener para qualquer clique na tela
-  window.addEventListener("click", function clickListener() {
-    ativarReinicio();
-    window.removeEventListener("click", clickListener);
-  }, { once: true });
+  // Clique/touch na tela
+  const reinicioTela = () => ativarReinicio();
+  window.addEventListener("click", reinicioTela, { once: true });
+  window.addEventListener("touchstart", reinicioTela, { once: true });
 
-  // Listener para o botão de pular
-  btnPular.addEventListener("click", function botaoListener() {
-    ativarReinicio();
-    btnPular.removeEventListener("click", botaoListener);
-  });
+  // Botão de pular
+  btnPular.addEventListener("mousedown", ativarReinicio, { once: true });
+  btnPular.addEventListener("touchstart", ativarReinicio, { once: true });
 }
 
-
 // --- Início ---
-iniciarPontuacao();
+requestAnimationFrame(atualizar);
 criarCacto();
 

@@ -120,4 +120,15 @@ h1 {
   }
 }
 
+body, html {
+  -webkit-user-select: none; /* desativa seleção de texto */
+  -webkit-tap-highlight-color: transparent; /* remove efeito azul no toque */
+  touch-action: manipulation; /* melhora resposta de toque */
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+
 
