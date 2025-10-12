@@ -1,0 +1,53 @@
+body {
+  text-align: center;
+  font-family: Arial, sans-serif;
+  background-color: #f4f4f4;
+}
+
+.game-area {
+  position: relative;
+  width: 600px;
+  height: 200px;
+  margin: 40px auto;
+  background-color: #fff;
+  border: 2px solid #333;
+  overflow: hidden;
+}
+
+#dino {
+  width: 30px;
+  height: 40px;
+  background-image: url("imagens/Diogo.png");
+  background-size: cover;
+  background-repeat: no-repeat;
+  position: absolute;
+  bottom: 0;
+  left: 50px;
+}
+
+#cacto {
+  width: 30px;
+  height: 40px;
+  background-image: url("imagens/cacto.png");
+  background-size: cover;
+  background-repeat: no-repeat;
+  position: absolute;
+  bottom: 0;
+  right: -30px;
+  animation: moverCacto 2s linear infinite;
+}
+
+@keyframes moverCacto {
+  0% { right: -20px; }
+  100% { right: 100%; }
+}
+
+.pulo {
+  animation: pular 0.5s ease;
+}
+
+@keyframes pular {
+  0% { bottom: 0; }
+  50% { bottom: 100px; }
+  100% { bottom: 0; }
+}
